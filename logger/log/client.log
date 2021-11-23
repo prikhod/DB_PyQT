@@ -1,0 +1,3 @@
+2021-10-04 14:50:12,605        CRITICAL   client_log_config    Критическая ошибка
+2021-10-04 14:50:12,606        ERROR      client_log_config    Ошибка    
+2021-10-04 14:50:12,606        INFO       client_log_config    Информационное сообщение
