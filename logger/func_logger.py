@@ -18,7 +18,7 @@ class Log:
         else:
             t = traceback.format_stack()
             f = os.path.basename(traceback.format_stack()[0].strip().split()[1].strip(',').strip('"'))
-            raise ModuleNotFoundError(f'{f} not valid file')
+            # raise ModuleNotFoundError(f'{f} not valid file')
 
     def __call__(self, func):
         def decorated(*args, **kwargs):
