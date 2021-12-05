@@ -64,7 +64,6 @@ class ServerVerifier(type):
         for key, value in clsdict.items():
             if isinstance(value, socket.socket):
                 raise TypeError(f"Don't create socket in class!")
-
             if value != 'Port':
                 try:
                     instrs = dis.get_instructions(value)
