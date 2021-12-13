@@ -6,6 +6,8 @@ from json import JSONDecodeError
 from time import time, sleep
 
 import logger.server_log_config
+from db.crud import contacts
+from db.deps import get_db
 from logger.func_logger import Log
 from select import select
 import socket
@@ -13,7 +15,8 @@ import socket
 from common.utils import get_message, send_message, port, server_ip
 from common.variables import ACTION, ACCOUNT_NAME, RESPONSE, MAX_CONNECTIONS, \
     PRESENCE, TIME, USER, ERROR, DEFAULT_PORT, MESSAGE_TEXT, MESSAGE, SENDER, RESPONSE_200, RESPONSE_400, DESTINATION, \
-    EXIT
+    EXIT, GET_CONTACTS, USER_LOGIN, RESPONSE_202, ALERT, ADD_CONTACT, DEL_CONTACT, USER_ID
+from models.models import Contacts
 
 _logger = logging.getLogger('server')
 
@@ -135,6 +138,19 @@ class Server(metaclass=ServerVerifier):
                 and MESSAGE_TEXT in message:
             self.messages.append(message)
             return
+        elif ACTION in message \
+                and message[ACTION] == GET_CONTACTS \
+                and TIME in message \
+                and USER_LOGIN in message:
+            self.get_contacts(message)
+            return
+        elif ACTION in message \
+                and message[ACTION] == ADD_CONTACT or message[ACTION] == DEL_CONTACT \
+                and USER_ID in message \
+                and TIME in message \
+                and USER_LOGIN in message:
+            self.create_delete_contacts(message)
+            return
         elif ACTION in message and message[ACTION] == EXIT and ACCOUNT_NAME in message:
             try:
                 self.clients.remove(self.names[message[ACCOUNT_NAME]])
@@ -213,6 +229,24 @@ class Server(metaclass=ServerVerifier):
                         self.clients.remove(self.names[i[DESTINATION]])
                         self.names.pop(i[DESTINATION])
                 self.messages.clear()
+
+    def get_contacts(self, message):
+        resp = contacts.get(get_db(), message[USER_LOGIN])
+        message = {
+            RESPONSE: RESPONSE_202,
+            ALERT: resp
+        }
+        send_message(self.server_socket, message)
+
+    def create_delete_contacts(self, message):
+        if message[ACTION] == ADD_CONTACT:
+            resp = contacts.create(get_db(), Contacts(message[USER_ID], message[USER_LOGIN]))
+        else:
+            resp = contacts.remove(get_db(), message[USER_ID], message[USER_LOGIN])
+        message = {
+            RESPONSE: resp,
+        }
+        send_message(self.server_socket, message)
 
 
 if __name__ == '__main__':

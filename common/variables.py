@@ -13,6 +13,7 @@ ENCODING = 'utf-8'
 
 # Прококол JIM основные ключи:
 ACTION = 'action'
+ALERT = 'alert'
 TIME = 'time'
 USER = 'user'
 ACCOUNT_NAME = 'account_name'
@@ -26,10 +27,14 @@ MESSAGE = 'message'
 MESSAGE_TEXT = 'message_text'
 EXIT = 'exit'
 # LOGGING
-
-
+GET_CONTACTS = 'get_contacts'
+ADD_CONTACT = 'add_contact'
+DEL_CONTACT = 'del_contact'
+USER_LOGIN = 'user_login'
+USER_ID = 'user_id'
 LOGGING_LEVEL = logging.DEBUG
 RESPONSE_200 = {RESPONSE: 200}
+RESPONSE_202 = 202
 RESPONSE_400 = {
     RESPONSE: 400,
     ERROR: None
