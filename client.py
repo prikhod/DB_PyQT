@@ -12,7 +12,8 @@ import logger.client_log_config
 from logger.func_logger import Log
 from common.utils import get_message, send_message, port, server_ip
 from common.variables import ACTION, PRESENCE, TIME, USER, ACCOUNT_NAME, \
-    RESPONSE, ERROR, DEFAULT_IP_ADDRESS, DEFAULT_PORT, MESSAGE, MESSAGE_TEXT, SENDER, DESTINATION, EXIT
+    RESPONSE, ERROR, DEFAULT_IP_ADDRESS, DEFAULT_PORT, MESSAGE, MESSAGE_TEXT, SENDER, DESTINATION, EXIT, GET_CONTACTS, \
+    ALERT, ADD_CONTACT, USER_LOGIN, DEL_CONTACT
 from exceptions import BadMessageError
 
 _logger = logging.getLogger('client')
@@ -43,7 +44,7 @@ def _parse_args():
         '--name',
         '-n',
         required=False,
-        default=f'Guest{uuid.uuid4().__str__()}',
+        default=f'Guest{uuid.uuid4().__str__()[:5]}',
         help='username in chat.'
     )
     return parser.parse_args()
@@ -66,6 +67,7 @@ class ClientVerifier(type):
 
 class Client(metaclass=ClientVerifier):
     def __init__(self):
+        self.contacts = []
         args = _parse_args()
 
         _sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -95,6 +97,54 @@ class Client(metaclass=ClientVerifier):
         }
         _logger.debug(f'create_presence account_name={self.username}, ACTION={ACTION}: PRESENCE={PRESENCE}')
         return out
+
+    @Log(_logger)
+    def get_contacts_message(self):
+        out = {
+            ACTION: GET_CONTACTS,
+            TIME: time.time(),
+            USER: {
+                ACCOUNT_NAME: self.username
+            }
+        }
+        _logger.debug(f'get_contacts_message account_name={self.username}, ACTION={GET_CONTACTS}')
+        return out
+
+    def get_contacts(self):
+        send_message(self.sock, self.get_contacts_message())
+        try:
+            msg = get_message(self.sock)
+            if msg[RESPONSE] == 202:
+                self.contacts = msg[ALERT]
+                _logger.info(f'server response {msg}')
+            else:
+                _logger.error(f'bad response {msg}')
+        except Exception as e:
+            _logger.error(f'{e}')
+
+    def change_contact(self, contact_login, action):
+        send_message(self.sock, {
+            ACTION: action,
+            USER_LOGIN: contact_login,
+            TIME: time.time(),
+            USER: {
+                ACCOUNT_NAME: self.username
+            }
+        })
+        try:
+            msg = get_message(self.sock)
+            if msg[RESPONSE] == 200:
+                _logger.info(f'server response {msg}')
+            else:
+                _logger.error(f'bad response {msg}')
+        except Exception as e:
+            _logger.error(f'{e}')
+
+    def add_contact(self, contact_login):
+        self.change_contact(contact_login, ADD_CONTACT)
+
+    def delete_contact(self, contact_login):
+        self.change_contact(contact_login, DEL_CONTACT)
 
     @Log(_logger)
     def message_from_server(self):
@@ -154,7 +204,7 @@ class Client(metaclass=ClientVerifier):
         raise BadMessageError
 
     def run(self):
-        message_to_server = self.create_presence(self.username)
+        message_to_server = self.create_presence()
         send_message(self.sock, message_to_server)
         try:
             msg = get_message(self.sock)
@@ -165,6 +215,7 @@ class Client(metaclass=ClientVerifier):
         except BadMessageError as e:
             _logger.error(f'{e}')
         else:
+            self.get_contacts()
             user_receiver = threading.Thread(target=self.message_from_server)
             user_receiver.daemon = True
             user_receiver.start()
